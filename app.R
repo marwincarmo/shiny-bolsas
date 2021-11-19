@@ -3,7 +3,7 @@ library(shinyWidgets)
 library(leaflet)
 library(dplyr)
 
-base <- readr::read_rds("data/cnpq_completo.rds")
+base <- readr::read_rds("G:/Documentos/ProjetosR/shiny-bolsas-antigo/data/cnpq_completo.rds")
 
 ui <- fluidPage(
   
@@ -88,6 +88,7 @@ server <- function(input, output, session) {
       filter(categoria %in% input$categoria_bolsa) |>
       distinct(modalidade) %>% 
       pull(modalidade)
+    
     updateSelectInput(
       session,
       "modalidade_bolsa",
@@ -99,7 +100,9 @@ server <- function(input, output, session) {
     base_mapa <- base %>%
       filter(ano_referencia %in% seq(min(input$ano_bolsa), max(input$ano_bolsa)),
              categoria %in% all_categorias(),
-             grande_area %in% all_areas()) %>% 
+             grande_area %in% all_areas()
+             #modalidade %in% input$modalidade_bolsa
+             ) %>% 
       group_by(addr, latitude, longitude) %>% 
       summarise(bolsas_concedidas = sum(bolsas_concedidas))
     
