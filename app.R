@@ -3,7 +3,8 @@ suppressPackageStartupMessages({
   library(shiny)
   library(shinyWidgets)
   library(shinyjs)
-  library(shinydashboard)
+  library(bs4Dash)
+  #library(shinydashboard)
   library(leaflet)
   library(dplyr)
   library(ggplot2)
@@ -77,8 +78,8 @@ ui <- dashboardPage(
                                de bolsas cedidas pelo cnpq. Utilizando os campos acima,
                                você pode filtrar os resultados selecionando um ou mais
                                critérios específicos. Caso nenhum filtro esteja selecionado, 
-                               serão apresentados os resultados para todas as categorias 
-                               e modalidades."),
+                               serão apresentados os resultados para todas as categorias, 
+                               modalidades e áreas."),
                                p("Ao aproximar a visão do mapa, um marcador indicará cada
                                cidade para qual houve a destinação de alguma bolsa.
                                Ao clicar no marcador, você poderá ver o nome da cidade
@@ -90,6 +91,10 @@ ui <- dashboardPage(
           )
           
         )
+      ),
+      tabItem(
+        tabName = "tab_area"
+        
       )
     )
   )
@@ -99,6 +104,7 @@ server <- function(input, output, session) {
   
   all_categorias <- reactive(no_filter(input$categoria_bolsa, base$categoria))
   all_areas <- reactive(no_filter(input$area_bolsa, base$grande_area))
+  all_modalidade <- reactive(no_filter(input$modalidade_bolsa, base$modalidade))
   
   base_mapa <- reactive(
     base %>%
@@ -110,7 +116,7 @@ server <- function(input, output, session) {
   )
   
   observe({
-    # Sys.sleep(3)
+    
     escolha_modalidade <- base |>
       filter(categoria %in% input$categoria_bolsa) |>
       distinct(modalidade) %>% 
@@ -127,8 +133,8 @@ server <- function(input, output, session) {
     base_mapa <- base %>%
       filter(ano_referencia %in% seq(min(input$ano_bolsa), max(input$ano_bolsa)),
              categoria %in% all_categorias(),
-             grande_area %in% all_areas()
-             #modalidade %in% input$modalidade_bolsa
+             grande_area %in% all_areas(),
+             modalidade %in% all_modalidade()
              ) %>% 
       group_by(addr, latitude, longitude) %>% 
       summarise(bolsas_concedidas = sum(bolsas_concedidas))
