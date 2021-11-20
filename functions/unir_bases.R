@@ -105,4 +105,5 @@ bases <- list.files("data/")
 
 cnpq_completo <- purrr::map_dfr(bases, ~readr::read_rds(paste0("data/", .x)))
 
-readr::write_rds(cnpq_completo, "data/cnpq_completo.rds")
+saveRDS(cnpq_completo, file = "data/cnpq_completo.rds",
+        compress = TRUE)

@@ -3,7 +3,7 @@ library(shinyWidgets)
 library(leaflet)
 library(dplyr)
 
-base <- readr::read_rds("G:/Documentos/ProjetosR/shiny-bolsas-antigo/data/cnpq_completo.rds")
+base <- readr::read_rds("data/cnpq_completo.rds")
 
 ui <- fluidPage(
   

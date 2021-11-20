@@ -3,7 +3,7 @@ library(leaflet)
 library(tidygeocoder)
 library(htmltools)
 
-base <- readr::read_rds("data/cnpq_completo.rds") 
+base <- readr::read_rds("G:/Documentos/ProjetosR/shiny-bolsas-antigo/data/cnpq_completo.rds") 
 
 cidades <- base %>% 
   select(cidade_destino, sigla_uf_destino) %>% 
