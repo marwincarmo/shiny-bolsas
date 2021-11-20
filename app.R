@@ -21,6 +21,7 @@ source("ui/sidebar.R")
 
 
 ui <- dashboardPage(
+  #fullscreen = TRUE,
   skin = 'blue',
   dashboardHeader(title = 'Bolsas CNPq'),
   sidebar = sidebar,
@@ -48,32 +49,6 @@ ui <- dashboardPage(
                                      
                                      h2("Mapa das bolsas"),
                                      
-                                     sliderInput(
-                                       inputId = "ano_bolsa",
-                                       label = "Escolha um período:",
-                                       sep = "",
-                                       step = 1,
-                                       min = min(base$ano_referencia),
-                                       max = max(base$ano_referencia),
-                                       value = c(2016,2020)
-                                     ),
-                                     
-                                     selectInput(inputId = "categoria_bolsa", 
-                                                 label = "Categoria da bolsa",
-                                                 choices = sort(unique(base$categoria)),
-                                                 multiple = TRUE),
-                                     
-                                     selectInput(inputId = "modalidade_bolsa", 
-                                                 label = "Modalidade da bolsa",
-                                                 choices = c("Carregando..." = ""),
-                                                 selectize = TRUE,
-                                                 multiple = TRUE),
-                                     
-                                     selectInput(inputId = "area_bolsa", 
-                                                 label = "Grande Área",
-                                                 choices = sort(unique(base$grande_area)),
-                                                 multiple = TRUE),
-                                     
                                      p("Este mapa mostra a distribuição das cidades de destino
                                de bolsas cedidas pelo cnpq. Utilizando os campos acima,
                                você pode filtrar os resultados selecionando um ou mais
@@ -93,24 +68,112 @@ ui <- dashboardPage(
         )
       ),
       tabItem(
-        tabName = "tab_area"
+        tabName = "area_tab"
+
         
       )
     )
+  ),
+  controlbar = dashboardControlbar(
+    skin = "light",
+    width = 300,
+    pinned = TRUE,
+    collapsed = FALSE,
+    overlay = FALSE,
+    controlbarMenu(
+      id = "controlbarmenu",
+      controlbarItem(
+        title = "Area",
+        ## período ----
+        sliderInput(
+          inputId = "date_range",
+          label = "Escolha um período:",
+          sep = "",
+          step = 1,
+          min = min(base$ano_referencia),
+          max = max(base$ano_referencia),
+          value = c(2016,2020)
+        ),
+        
+        pickerInput(
+          inputId = "grande_area",
+          label = "Grande Area", 
+          choices = sort(unique(base$grande_area)),
+          options = list(
+            title = "Escolha uma ou mais áreas"), 
+          multiple = TRUE
+        ),
+        
+        selectInput(inputId = "area_especifica", 
+                    label = "Area específica",
+                    choices = c("Carregando..." = ""),
+                    selectize = TRUE,
+                    multiple = TRUE),
+        
+        selectInput(inputId = "categoria_bolsa", 
+                    label = "Categoria da bolsa",
+                    choices = sort(unique(base$categoria)),
+                    multiple = TRUE),
+        
+        selectInput(inputId = "modalidade_bolsa", 
+                    label = "Modalidade da bolsa",
+                    choices = c("Carregando..." = ""),
+                    selectize = TRUE,
+                    multiple = TRUE)
+      ),
+      controlbarItem(
+        title = "Localização",
+        # selecionar país ----
+        pickerInput(
+          inputId = "pais_destino",
+          label = "País de destino", 
+          choices = sort(unique(base$pais_destino)),
+          options = list(
+            title = "Escolha um ou mais países"), 
+          multiple = TRUE
+        ),
+        ## selecionar UF ----
+        selectInput(inputId = "uf_destino", 
+                    label = "Estado (apenas BR)",
+                    choices = c("Carregando..." = ""),
+                    selectize = TRUE,
+                    multiple = TRUE),
+        ## selecionar cidade ----
+        selectInput(inputId = "cidade_destino", 
+                    label = "Cidade (global)",
+                    choices = c("Carregando..." = ""),
+                    selectize = TRUE,
+                    multiple = TRUE),
+        ## selecionar instituicao ----
+        selectInput(inputId = "inst_destino", 
+                    label = "Instituição destino",
+                    choices = c("Carregando..." = ""),
+                    selectize = TRUE,
+                    multiple = TRUE)
+      )
+      
+    )
+    ),
+  footer = dashboardFooter(
+    left = a(
+      href = "https://twitter.com/marwincarmo",
+      target = "_blank", "@marwincarmo"
+    ),
+    right = "2021"
   )
 )
 
 server <- function(input, output, session) {
   
-  all_categorias <- reactive(no_filter(input$categoria_bolsa, base$categoria))
-  all_areas <- reactive(no_filter(input$area_bolsa, base$grande_area))
-  all_modalidade <- reactive(no_filter(input$modalidade_bolsa, base$modalidade))
+  react_categoria <- reactive(no_filter(input$categoria_bolsa, base$categoria))
+  react_grande_area <- reactive(no_filter(input$grande_area, base$grande_area))
+  react_modalidade <- reactive(no_filter(input$modalidade_bolsa, base$modalidade))
   
   base_mapa <- reactive(
     base %>%
-    filter(ano_referencia %in% seq(min(input$ano_bolsa), max(input$ano_bolsa)),
-           categoria %in% all_categorias(),
-           grande_area %in% all_areas()) %>% 
+    filter(ano_referencia %in% seq(min(input$date_range), max(input$date_range)),
+           categoria %in% react_categoria(),
+           grande_area %in% react_grande_area()) %>% 
     group_by(addr, latitude, longitude) %>% 
     summarise(bolsas_concedidas = sum(bolsas_concedidas))
   )
@@ -122,19 +185,72 @@ server <- function(input, output, session) {
       distinct(modalidade) %>% 
       pull(modalidade)
     
+    escolha_grande_area <- base %>% 
+      filter(grande_area %in% input$grande_area_selected) %>% 
+      distinct(area) %>% 
+      pull(area)
+    
+    escolha_uf <- base %>% 
+      filter(pais_destino %in% input$pais_destino) %>% 
+      distinct(sigla_uf_destino) %>% 
+      pull(sigla_uf_destino)
+    
+    # escolha_cidade <- if (is.na(input$uf_destino)) {
+    #   
+    #   base %>% 
+    #     filter(sigla_uf_destino %in% input$uf_destino) %>% 
+    #     distinct(cidade_destino) %>% 
+    #     pull(cidade_destino)
+    # 
+    #   } else if (!is.na(input$pais_destino)) {
+    #     
+    #     base %>% 
+    #       filter(pais_destino %in% input$pais_destino) %>% 
+    #       distinct(cidade_destino) %>% 
+    #       pull(cidade_destino)
+    #     
+    #   } else {
+    #   
+    #     NULL
+    # }
+      
+    
+    ## update modalidade bolsa ----
     updateSelectInput(
       session,
       "modalidade_bolsa",
       choices = escolha_modalidade
     )
+    
+    ## update area de pesquisa ----
+    updateSelectInput(
+      session,
+      "area_selected",
+      choices = escolha_grande_area
+    )
+    
+    ## update uf destino ----
+    updateSelectInput(
+      session,
+      "uf_destino",
+      choices = escolha_uf
+    )
+    
+    ## update cidade destino ----
+    # updateSelectInput(
+    #   session,
+    #   "cidade_destino",
+    #   choices = escolha_cidade
+    # )
+    
   })
   
   output$map <- renderLeaflet({
     base_mapa <- base %>%
-      filter(ano_referencia %in% seq(min(input$ano_bolsa), max(input$ano_bolsa)),
-             categoria %in% all_categorias(),
-             grande_area %in% all_areas(),
-             modalidade %in% all_modalidade()
+      filter(ano_referencia %in% seq(min(input$date_range), max(input$date_range)),
+             categoria %in% react_categoria(),
+             grande_area %in% react_grande_area(),
+             modalidade %in% react_modalidade()
              ) %>% 
       group_by(addr, latitude, longitude) %>% 
       summarise(bolsas_concedidas = sum(bolsas_concedidas))

@@ -67,3 +67,33 @@ base %>%
   filter(categoria %in% "Mestrado") %>% 
   distinct(modalidade) %>% 
   pull(modalidade)
+
+
+
+# caixinha flutuante ------------------------------------------------------
+
+sliderInput(
+  inputId = "ano_bolsa",
+  label = "Escolha um período:",
+  sep = "",
+  step = 1,
+  min = min(base$ano_referencia),
+  max = max(base$ano_referencia),
+  value = c(2016,2020)
+),
+
+selectInput(inputId = "categoria_bolsa", 
+            label = "Categoria da bolsa",
+            choices = sort(unique(base$categoria)),
+            multiple = TRUE),
+
+selectInput(inputId = "modalidade_bolsa", 
+            label = "Modalidade da bolsa",
+            choices = c("Carregando..." = ""),
+            selectize = TRUE,
+            multiple = TRUE),
+
+selectInput(inputId = "area_bolsa", 
+            label = "Grande Área",
+            choices = sort(unique(base$grande_area)),
+            multiple = TRUE),

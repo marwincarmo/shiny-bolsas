@@ -8,6 +8,6 @@ sidebar <- dashboardSidebar(
     menuItem("Mapa", tabName = "map_tab",
              icon = icon("home"),
              startExpanded = TRUE),
-    menuItem("Por area", tabName = "tab_area")
+    menuItem("Por area", tabName = "area_tab")
   )
 )
