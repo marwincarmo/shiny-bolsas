@@ -119,7 +119,15 @@ ui <- dashboardPage(
                     label = "Modalidade da bolsa",
                     choices = c("Carregando..." = ""),
                     selectize = TRUE,
-                    multiple = TRUE)
+                    multiple = TRUE),
+        actionBttn(
+          inputId = "reset_area",
+          label = "Limpar seleção",
+          style = "simple", 
+          color = "primary",
+          icon = icon("trash"),
+          size = "sm"
+        )
       ),
       controlbarItem(
         title = "Localização",
@@ -146,7 +154,17 @@ ui <- dashboardPage(
         selectizeInput(inputId = "inst_destino", 
                     label = "Instituição destino",
                     choices = c("Carregando..." = ""),
-                    multiple = TRUE)
+                    multiple = TRUE),
+        
+        ## limpar selecao localizacao
+        actionBttn(
+          inputId = "reset_local",
+          label = "Limpar seleção",
+          style = "simple", 
+          color = "primary",
+          icon = icon("trash"),
+          size = "sm"
+        )
       )
       
     )
@@ -319,6 +337,22 @@ server <- function(input, output, session) {
       choices = escolha_inst,
       server = TRUE
     )
+  })
+  
+  ## reset button area ----
+  observeEvent(input$reset_area, {
+    updateSliderInput(inputId = "date_range", value = c(2016,2020))
+    updatePickerInput(session, inputId = "grande_area", selected = character(0))
+    updateSelectInput(inputId = "categoria_bolsa", selected = character(0))
+    updateSelectInput(inputId = "modalidade_bolsa", selected = character(0))
+  })
+  
+  ## reset button localizacao ----
+  observeEvent(input$reset_local, {
+    updatePickerInput(session, inputId = "pais_destino", selected = character(0))
+    updateSelectizeInput(inputId = "uf_destino", selected = character(0), server = TRUE)
+    updateSelectizeInput(inputId = "cidade_destino", selected = character(0), server = TRUE)
+    updateSelectizeInput(inputId = "inst_destino", selected = character(0), server = TRUE)
   })
   
   output$map <- renderLeaflet({

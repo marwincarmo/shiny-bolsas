@@ -81,7 +81,14 @@ ui <- dashboardPage(
                     label = "Modalidade da bolsa",
                     choices = c("Carregando..." = ""),
                     selectize = TRUE,
-                    multiple = TRUE)
+                    multiple = TRUE),
+        actionBttn(
+          inputId = "reset_area",
+          label = "Limpar seleção",
+          style = "simple", 
+          color = "primary",
+          icon = icon("trash"),
+          size = "sm")
       ),
       controlbarItem(
         title = "Localização",
@@ -279,6 +286,13 @@ server <- function(input, output, session) {
       choices = escolha_inst,
       server = TRUE
     )
+  })
+  
+  observeEvent(input$reset_area, {
+    updateSliderInput(inputId = "date_range", value = c(2016,2020))
+    updatePickerInput(session, inputId = "grande_area", selected = character(0))
+    updateSelectInput(inputId = "categoria_bolsa", selected = character(0))
+    updateSelectInput(inputId = "modalidade_bolsa", selected = character(0))
   })
   
 }
