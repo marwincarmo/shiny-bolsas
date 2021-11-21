@@ -28,48 +28,10 @@ ui <- dashboardPage(
   dashboardBody(
     tabItems(
       tabItem(
-        tabName = "map_tab",
-        fluidPage(
-          tabPanel("",
-                   div(class="outer",
-                       
-                       tags$head(
-                         # Include our custom CSS
-                         includeCSS("styles.css"),
-                         #includeScript("gomap.js")
-                       ),
-                       
-                       # If not using custom CSS, set height of leafletOutput to a number instead of percent
-                       leafletOutput("map", width="100%", height="100%"),
-                       
-                       # Shiny versions prior to 0.11 should use class = "modal" instead.
-                       absolutePanel(id = "controls", class = "panel panel-default", fixed = TRUE,
-                                     draggable = TRUE, top = 60, left = "auto", right = 20, bottom = "auto",
-                                     width = 330, height = "auto",
-                                     
-                                     h2("Mapa das bolsas"),
-                                     
-                                     p("Este mapa mostra a distribuição das cidades de destino
-                               de bolsas cedidas pelo cnpq. Utilizando os campos acima,
-                               você pode filtrar os resultados selecionando um ou mais
-                               critérios específicos. Caso nenhum filtro esteja selecionado, 
-                               serão apresentados os resultados para todas as categorias, 
-                               modalidades e áreas."),
-                               p("Ao aproximar a visão do mapa, um marcador indicará cada
-                               cidade para qual houve a destinação de alguma bolsa.
-                               Ao clicar no marcador, você poderá ver o nome da cidade
-                               e a quantidade de bolsas cedidas."),
-                               p("Adaptado de https://github.com/rstudio/shiny-examples/tree/main/063-superzip-example")
-                               
-                       )
-                   )
-          )
-          
-        )
+        tabName = "map_tab"
       ),
       tabItem(
         tabName = "area_tab"
-
         
       )
     )
@@ -103,7 +65,7 @@ ui <- dashboardPage(
             title = "Escolha uma ou mais áreas"), 
           multiple = TRUE
         ),
-
+        
         selectInput(inputId = "area_especifica", 
                     label = "Area específica",
                     choices = c("Carregando..." = ""),
@@ -134,23 +96,23 @@ ui <- dashboardPage(
         ),
         ## selecionar UF ----
         selectizeInput(inputId = "uf_destino", 
-                    label = "Estado (apenas BR)",
-                    choices = c("Carregando..." = ""),
-                    multiple = TRUE),
+                       label = "Estado (apenas BR)",
+                       choices = c("Carregando..." = ""),
+                       multiple = TRUE),
         ## selecionar cidade ----
         selectizeInput(inputId = "cidade_destino", 
-                    label = "Cidade (global)",
-                    choices = c("Carregando..." = ""),
-                    multiple = TRUE),
+                       label = "Cidade (global)",
+                       choices = c("Carregando..." = ""),
+                       multiple = TRUE),
         ## selecionar instituicao ----
         selectizeInput(inputId = "inst_destino", 
-                    label = "Instituição destino",
-                    choices = c("Carregando..." = ""),
-                    multiple = TRUE)
+                       label = "Instituição destino",
+                       choices = c("Carregando..." = ""),
+                       multiple = TRUE)
       )
       
     )
-    ),
+  ),
   footer = dashboardFooter(
     left = a(
       href = "https://twitter.com/marwincarmo",
@@ -212,7 +174,7 @@ server <- function(input, output, session) {
         sort()
     }
     
-    
+
     ## update modalidade bolsa ----
     updateSelectInput(
       session,
@@ -239,7 +201,6 @@ server <- function(input, output, session) {
     
   })
   
-  ## update escolhas cidade ----
   observe({
     
     escolha_cidade <- if(is.null(input$uf_destino) &&
@@ -275,12 +236,11 @@ server <- function(input, output, session) {
     )
   })
   
-  ## update escolhas instituição ----
   observe({
     
     escolha_inst <- if(is.null(input$uf_destino) &&
-                       is.null(input$pais_destino) &&
-                       is.null(input$cidade_destino)) {
+                        is.null(input$pais_destino) &&
+                        is.null(input$cidade_destino)) {
       base %>% 
         distinct(instituicao_destino) %>% 
         pull() %>% 
@@ -321,28 +281,6 @@ server <- function(input, output, session) {
     )
   })
   
-  output$map <- renderLeaflet({
-    base_mapa <- base %>%
-      filter(ano_referencia %in% seq(min(input$date_range), max(input$date_range)),
-             categoria %in% react_categoria(),
-             grande_area %in% react_grande_area(),
-             modalidade %in% react_modalidade(),
-             area %in% react_area_especifica()
-             ) %>% 
-      group_by(addr, latitude, longitude) %>% 
-      summarise(bolsas_concedidas = sum(bolsas_concedidas))
-    
-    base_mapa %>% 
-      leaflet() %>% 
-      addTiles() %>% 
-      addMarkers(
-        popup = paste0(
-         '<b>Cidade:</b> ', base_mapa$addr, '<br>',
-         '<b>Bolsas:</b> ', base_mapa$bolsas_concedidas, '<br>'
-        ),
-        clusterOptions = markerClusterOptions()
-      )
-  })
 }
 
 shinyApp(ui, server)
