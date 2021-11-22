@@ -25,10 +25,19 @@ ui <- dashboardPage(
   skin = 'blue',
   dashboardHeader(title = 'Bolsas CNPq'),
   sidebar = sidebar,
-  dashboardBody(
+  bs4DashBody(
     tabItems(
       tabItem(
-        tabName = "map_tab"
+        tabName = "map_tab",
+        fluidRow(
+          ## value box com resumo da frequencia de bolsas ----
+          shinydashboard::valueBoxOutput("num_ic", width = 2),
+          shinydashboard::valueBoxOutput("num_mestrado", width = 2),
+          shinydashboard::valueBoxOutput("num_doutorado", width = 2),
+          shinydashboard::valueBoxOutput("num_posdoc", width = 2),
+          shinydashboard::valueBoxOutput("num_outro", width = 2)
+        )
+
       ),
       tabItem(
         tabName = "area_tab"
@@ -295,6 +304,43 @@ server <- function(input, output, session) {
     updateSelectInput(inputId = "modalidade_bolsa", selected = character(0))
   })
   
+  ## value box ic ----
+  output$num_ic <- shinydashboard::renderValueBox({
+    shinydashboard::valueBox(
+      0, "Bolsas de IC", icon = icon("list"),
+      color = "purple"
+    )
+  })
+  ## value box mestrado ----
+  output$num_mestrado <- shinydashboard::renderValueBox({
+    shinydashboard::valueBox(
+      0, "Bolsas de IC", icon = icon("list"),
+      color = "purple"
+    )
+  })
+  ## value box doutorado ----
+  output$num_doutorado <- shinydashboard::renderValueBox({
+    shinydashboard::valueBox(
+      0, "Bolsas de IC", icon = icon("list"),
+      color = "purple"
+    )
+  })
+  ## value box posdoc ----
+  output$num_posdoc <- shinydashboard::renderValueBox({
+    shinydashboard::valueBox(
+      0, "Bolsas de IC", icon = icon("list"),
+      color = "purple"
+    )
+  })
+  ## value box outras ----
+  output$num_outro <- shinydashboard::renderValueBox({
+    shinydashboard::valueBox(
+      0, "Bolsas de IC", icon = icon("list"),
+      color = "purple"
+    )
+  }) 
+
 }
+
 
 shinyApp(ui, server)

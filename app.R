@@ -8,6 +8,7 @@ suppressPackageStartupMessages({
   library(leaflet)
   library(dplyr)
   library(ggplot2)
+  library(echarts4r)
 })
 
 ## database ----
@@ -23,7 +24,11 @@ source("ui/sidebar.R")
 ui <- dashboardPage(
   #fullscreen = TRUE,
   skin = 'blue',
-  dashboardHeader(title = 'Bolsas CNPq'),
+  dashboardHeader(title = dashboardBrand(
+    title = 'Bolsas CNPq',
+    image = '<i class="fas fa-atom"></i>'
+    )
+    ),
   sidebar = sidebar,
   dashboardBody(
     tabItems(
@@ -68,8 +73,65 @@ ui <- dashboardPage(
         )
       ),
       tabItem(
-        tabName = "area_tab"
-
+        tabName = "area_tab",
+        
+        fluidRow(
+          ## value box com resumo da frequencia de bolsas ----
+          shinydashboard::valueBoxOutput("num_total", width = 2),
+          shinydashboard::valueBoxOutput("num_ic", width = 2),
+          shinydashboard::valueBoxOutput("num_mestrado", width = 2),
+          shinydashboard::valueBoxOutput("num_doutorado", width = 2),
+          shinydashboard::valueBoxOutput("num_posdoc", width = 2),
+          shinydashboard::valueBoxOutput("num_outro", width = 2)
+        ),
+        ## linha do tempo
+        fluidRow(
+          box(
+            title = "Linha do Tempo",
+            solidHeader = TRUE,
+            collapsible = TRUE,
+            width = 12,
+            radioGroupButtons(
+              inputId = "escolha_grafico",
+              label = "",
+              choices = c("Bolsas concedidas", "Valor pago"),
+              individual = TRUE,
+              checkIcon = list(
+                yes = tags$i(class = "fa fa-circle", 
+                             style = "color: steelblue"),
+                no = tags$i(class = "fa fa-circle-o", 
+                            style = "color: steelblue"))
+            ),
+            echarts4rOutput("timeline")
+            
+          )
+          
+        ),
+        ## gráficos de ranking ----
+        fluidRow(
+          column(width = 6,
+                 box(
+                   width = NULL,
+                   title = "Ranking por Cidade",
+                   solidHeader = TRUE,
+                   collapsible = TRUE
+                   )
+                 ),
+          column(width = 6,
+                 box(
+                   width = NULL,
+                   title = "Ranking por Instituição",
+                   solidHeader = TRUE,
+                   collapsible = TRUE
+                 ))
+        ),
+        ## tabela de dados gerais ----
+        fluidRow(
+          box(title = "Tabela de dados",
+              solidHeader = TRUE,
+              collapsible = TRUE,
+              width = 12)
+        )
         
       )
     )
@@ -83,7 +145,7 @@ ui <- dashboardPage(
     controlbarMenu(
       id = "controlbarmenu",
       controlbarItem(
-        title = "Area",
+        title = "Período/ Área",
         ## período ----
         sliderInput(
           inputId = "date_range",
@@ -130,7 +192,7 @@ ui <- dashboardPage(
         )
       ),
       controlbarItem(
-        title = "Localização",
+        title = "Local",
         # selecionar país ----
         pickerInput(
           inputId = "pais_destino",
@@ -377,6 +439,76 @@ server <- function(input, output, session) {
         clusterOptions = markerClusterOptions()
       )
   })
+  
+  ## value box total ----
+  output$num_total <- shinydashboard::renderValueBox({
+    shinydashboard::valueBox(
+      0, "Bolsas no total",
+      color = "purple"
+    )
+  })
+  
+  ## value box ic ----
+  output$num_ic <- shinydashboard::renderValueBox({
+    shinydashboard::valueBox(
+      0, "Bolsas de IC",
+      color = "purple"
+    )
+  })
+  ## value box mestrado ----
+  output$num_mestrado <- shinydashboard::renderValueBox({
+    shinydashboard::valueBox(
+      0, "Bolsas de Mestrado",
+      color = "purple"
+    )
+  })
+  ## value box doutorado ----
+  output$num_doutorado <- shinydashboard::renderValueBox({
+    shinydashboard::valueBox(
+      0, "Bolsas de Doutorado",
+      color = "purple"
+    )
+  })
+  ## value box posdoc ----
+  output$num_posdoc <- shinydashboard::renderValueBox({
+    shinydashboard::valueBox(
+      0, "Bolsas de Pós-doc",
+      color = "purple"
+    )
+  })
+  ## value box outras ----
+  output$num_outro <- shinydashboard::renderValueBox({
+    shinydashboard::valueBox(
+      0, "Bolsas de outra categoria",
+      color = "purple"
+    )
+  })
+  
+  ## output grafico de linha do tempo ----
+  
+  output$timeline <- renderEcharts4r({
+    
+    base %>% 
+      sample_n(1000) %>% 
+      group_by(ano_referencia, categoria) %>% 
+      summarise(bolsas_concedidas = sum(bolsas_concedidas), .groups = "drop") %>% 
+      group_by(ano_referencia) %>% 
+      tidyr::nest() %>% 
+      ungroup() %>% 
+      mutate(data = purrr::map(data, janitor::adorn_totals, "row")) %>% 
+      tidyr::unnest(data) %>% 
+      group_by(categoria) %>% 
+      mutate(ano_referencia = as.character(ano_referencia)) %>% 
+      e_charts(ano_referencia) %>%
+      e_line(bolsas_concedidas) %>% 
+      #e_x_axis(min = 2010, formatter = e_axis_formatter(digits = 0, locale = "pt-BR", sep = "")) %>% 
+      e_axis_labels(x = "Ano", y = "Bolsas concedidas") %>% 
+      #e_title("Linha do tempo") %>% 
+      e_tooltip(trigger = "axis", formatter = e_tooltip_pointer_formatter(digits = 0)) %>% 
+      e_theme("bee-insipired")
+    
+  })
+  
 }
 
 shinyApp(ui, server)

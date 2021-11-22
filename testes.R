@@ -97,3 +97,26 @@ selectInput(inputId = "area_bolsa",
             label = "Grande Área",
             choices = sort(unique(base$grande_area)),
             multiple = TRUE),
+
+
+base <- readr::read_rds("data/cnpq_completo.rds") %>% 
+  sample_n(1000)
+
+
+base %>% 
+  group_by(ano_referencia, categoria) %>% 
+  summarise(bolsas_concedidas = sum(bolsas_concedidas), .groups = "drop") %>% 
+  tidyr::pivot_wider(names_from = categoria, values_from = bolsas_concedidas) %>% 
+  janitor::clean_names() %>% 
+  mutate(total = rowSums(across(doutorado:pos_doutorado))) %>% 
+  as.data.frame() %>% 
+  e_charts(ano_referencia) %>% 
+  e_line(total, name = "Total") %>% 
+  e_line(iniciacao_cientifica, name = "Iniciação Científica") %>% 
+  e_line(mestrado, name = "Mestrado") %>% 
+  e_line(doutorado, name = "Doutorado") %>% 
+  e_line(pos_doutorado, name = "Pos-doc") %>% 
+  e_line(outros, name = "Outras") %>%
+  e_x_axis(min = 2010) %>% 
+  e_tooltip(trigger = "axis") %>% 
+  e_theme("green")

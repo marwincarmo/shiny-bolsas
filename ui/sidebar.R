@@ -6,8 +6,10 @@ sidebar <- dashboardSidebar(
     # menuItem("Main", tabName = "main_tab",
     #          icon = icon("home")),
     menuItem("Mapa", tabName = "map_tab",
-             icon = icon("home"),
+             icon = icon("map-marked-alt"),
              startExpanded = TRUE),
-    menuItem("Por area", tabName = "area_tab")
+    menuItem("Por area", 
+             tabName = "area_tab",
+             icon = icon("chart-bar"))
   )
 )

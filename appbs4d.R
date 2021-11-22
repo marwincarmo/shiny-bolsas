@@ -1,5 +1,4 @@
 library(shiny)
-library(shinyWidgets)
 library(bs4Dash)
 
 shinyApp(
