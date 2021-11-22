@@ -25,17 +25,24 @@ source("ui/sidebar.R")
 ui <- dashboardPage(
   #fullscreen = TRUE,
   skin = 'blue',
-  dashboardHeader(title = dashboardBrand(
+  dashboardHeader(
+    title = dashboardBrand(
     title = 'Bolsas CNPq',
-    image = '<i class="fas fa-atom"></i>',
-    href = 'https://github.com/marwincarmo/shiny-bolsas'
-    )
+    href = 'https://github.com/marwincarmo/shiny-bolsas')
     ),
   sidebar = sidebar,
   dashboardBody(
     tabItems(
+      # Aba info ----
       tabItem(
-        # Aba mapa
+        tabName = "info_tab",
+        fluidRow(
+          column(width = 12,
+                 includeMarkdown("R/info.Rmd"))
+        )
+      ),
+      # Aba mapa ----
+      tabItem(
         tabName = "map_tab",
         fluidPage(
           tabPanel("",
@@ -50,21 +57,6 @@ ui <- dashboardPage(
                        # If not using custom CSS, set height of leafletOutput to a number instead of percent
                        leafletOutput("map", width="100%", height="100%"),
                        
-                       # Shiny versions prior to 0.11 should use class = "modal" instead.
-                       absolutePanel(id = "controls", class = "panel panel-default", fixed = TRUE,
-                                     draggable = TRUE, top = 60, left = "auto", right =  "auto", bottom = "auto",
-                                     width = 330, height = 330,
-                                     
-                                     h2("Mapa das bolsas"),
-                                     
-                                     p("Este mapa mostra a distribuição das cidades de destino
-                               de bolsas cedidas pelo CNPq. Ao aproximar a visão do mapa, um marcador indicará cada
-                               cidade para qual houve a destinação de alguma bolsa.
-                               Ao clicar no marcador, você poderá ver o nome da cidade
-                               e a quantidade de bolsas cedidas."),
-                               p("Adaptado de https://github.com/rstudio/shiny-examples/tree/main/063-superzip-example")
-                               
-                       )
                    )
           )
           
@@ -89,7 +81,10 @@ ui <- dashboardPage(
             title = "Linha do Tempo",
             solidHeader = TRUE,
             collapsible = TRUE,
+            maximizable = TRUE,
+            status = "info",
             width = 12,
+            ### botao seletor grafico temporal ----
             radioGroupButtons(
               inputId = "escolha_grafico",
               label = "",
@@ -101,7 +96,7 @@ ui <- dashboardPage(
                 no = tags$i(class = "fa fa-circle-o", 
                             style = "color: steelblue"))
             ),
-            echarts4rOutput("timeline")
+            shinycssloaders::withSpinner(echarts4rOutput("timeline"))
             
           )
           
@@ -114,7 +109,9 @@ ui <- dashboardPage(
                    title = "Ranking por Cidade",
                    solidHeader = TRUE,
                    collapsible = TRUE,
-                   echarts4rOutput("ranking_cidade")
+                   maximizable = TRUE,
+                   status = "info",
+                   shinycssloaders::withSpinner(echarts4rOutput("ranking_cidade"))
                    )
                  ),
           column(width = 6,
@@ -123,7 +120,9 @@ ui <- dashboardPage(
                    title = "Ranking por Instituição",
                    solidHeader = TRUE,
                    collapsible = TRUE,
-                   echarts4rOutput("ranking_instituicao")
+                   maximizable = TRUE,
+                   status = "info",
+                   shinycssloaders::withSpinner(echarts4rOutput("ranking_instituicao"))
                  ))
         ),
         ## tabela de dados gerais ----
@@ -131,8 +130,10 @@ ui <- dashboardPage(
           box(title = "Tabela de dados",
               solidHeader = TRUE,
               collapsible = TRUE,
+              maximizable = TRUE,
+              status = "info",
               width = 12,
-              reactable::reactableOutput("tabela_geral"))
+              shinycssloaders::withSpinner(reactable::reactableOutput("tabela_geral")))
         )
         
       )
@@ -191,7 +192,7 @@ ui <- dashboardPage(
           inputId = "reset_area",
           label = "Limpar seleção",
           style = "simple", 
-          color = "primary",
+          color = "danger",
           icon = icon("trash"),
           size = "sm"
         )
@@ -229,7 +230,7 @@ ui <- dashboardPage(
           inputId = "reset_local",
           label = "Limpar seleção",
           style = "simple", 
-          color = "primary",
+          color = "danger",
           icon = icon("trash"),
           size = "sm"
         )
@@ -461,7 +462,7 @@ server <- function(input, output, session) {
       addMarkers(
         popup = paste0(
         '<b>Cidade:</b> ', base_mapa$addr, '<br>',
-        '<b>Bolsas:</b> ', base_mapa$bolsas_concedidas, '<br>'
+        '<b>Bolsas:</b> ', format(base_mapa$bolsas_concedidas, big.mark = "."), '<br>'
         ),
         clusterOptions = markerClusterOptions()
       )
@@ -470,50 +471,55 @@ server <- function(input, output, session) {
   ## value box total ----
   output$num_total <- shinydashboard::renderValueBox({
       shinydashboard::valueBox(
-      sum(pull(base_filtrada(), bolsas_concedidas)), "Bolsas no total",
+      format(sum(pull(base_filtrada(), bolsas_concedidas)), big.mark = "."),
+      "Bolsas no total",
       color = "purple"
     )
   })
   
-  
   ## value box ic ----
   output$num_ic <- shinydashboard::renderValueBox({
     shinydashboard::valueBox(
-      sum(pull(dplyr::filter(base_filtrada(), categoria == "Iniciação Científica"), bolsas_concedidas)), 
+      format(sum(pull(dplyr::filter(base_filtrada(), 
+                                    categoria == "Iniciação Científica"), bolsas_concedidas)), big.mark = "."), 
       "Bolsas de Iniciação Científica",
-      color = "purple"
+      color = "olive"
     )
   })
   ## value box mestrado ----
   output$num_mestrado <- shinydashboard::renderValueBox({
     shinydashboard::valueBox(
-      sum(pull(dplyr::filter(base_filtrada(), categoria == "Mestrado"), bolsas_concedidas)),
+      format(sum(pull(dplyr::filter(base_filtrada(), 
+                                    categoria == "Mestrado"), bolsas_concedidas)), big.mark = "."),
       "Bolsas de Mestrado",
-      color = "purple"
+      color = "olive"
     )
   })
   ## value box doutorado ----
   output$num_doutorado <- shinydashboard::renderValueBox({
     shinydashboard::valueBox(
-      sum(pull(dplyr::filter(base_filtrada(), categoria == "Doutorado"), bolsas_concedidas)),
+      format(sum(pull(dplyr::filter(base_filtrada(), 
+                                    categoria == "Doutorado"), bolsas_concedidas)), big.mark = "."),
       "Bolsas de Doutorado",
-      color = "purple"
+      color = "olive"
     )
   })
   ## value box posdoc ----
   output$num_posdoc <- shinydashboard::renderValueBox({
     shinydashboard::valueBox(
-      sum(pull(dplyr::filter(base_filtrada(), categoria == "Pós-doutorado"), bolsas_concedidas)),
+      format(sum(pull(dplyr::filter(base_filtrada(), 
+                                    categoria == "Pós-doutorado"), bolsas_concedidas)), big.mark = "."),
       "Bolsas de Pós-doc",
-      color = "purple"
+      color = "olive"
     )
   })
   ## value box outras ----
   output$num_outro <- shinydashboard::renderValueBox({
     shinydashboard::valueBox(
-      sum(pull(dplyr::filter(base_filtrada(), categoria == "Outros"), bolsas_concedidas)),
+      format(sum(pull(dplyr::filter(base_filtrada(), 
+                                    categoria == "Outros"), bolsas_concedidas)), big.mark = "."),
       "Bolsas de outra categoria",
-      color = "purple"
+      color = "olive"
     )
   })
   
@@ -521,34 +527,72 @@ server <- function(input, output, session) {
   
   output$timeline <- renderEcharts4r({
     
-    base_filtrada() %>% 
-      group_by(ano_referencia, categoria) %>% 
-      summarise(bolsas_concedidas = sum(bolsas_concedidas), .groups = "drop") %>% 
-      group_by(ano_referencia) %>% 
-      tidyr::nest() %>% 
-      ungroup() %>% 
-      mutate(data = purrr::map(data, janitor::adorn_totals, "row")) %>% 
-      tidyr::unnest(data) %>% 
-      group_by(categoria) %>% 
-      mutate(ano_referencia = as.character(ano_referencia)) %>% 
-      e_charts(ano_referencia) %>%
-      e_line(bolsas_concedidas) %>% 
-      #e_x_axis(min = 2010, formatter = e_axis_formatter(digits = 0, locale = "pt-BR")) %>% 
-      e_y_axis(formatter = e_axis_formatter(locale = "pt-BR")) %>% 
-      e_axis_labels(x = "Ano", y = "Bolsas concedidas") %>% 
-      e_title("Linha do tempo", left = 'center') %>% 
-      e_tooltip(trigger = "axis", 
-                formatter = e_tooltip_pointer_formatter(digits = 0)) %>% 
-      e_grid(right = '15%') %>% 
-      e_legend(orient = 'vertical', right = '5', top = '15%',
-               selector = list(
-                 list(type = 'inverse', title = 'Inverter'),
-                 list(type = 'all', title = 'Restaurar')
-               )) %>% 
-      e_toolbox_feature(c("dataZoom", "dataView", "saveAsImage")) %>% 
-      e_animation(duration = 1000) %>% 
-      e_theme("bee-insipired")
+    if (input$escolha_grafico == "Bolsas concedidas") {
+      
+      base_filtrada() %>% 
+        group_by(ano_referencia, categoria) %>% 
+        summarise(bolsas_concedidas = sum(bolsas_concedidas), .groups = "drop") %>% 
+        group_by(ano_referencia) %>% 
+        tidyr::nest() %>% 
+        ungroup() %>% 
+        mutate(data = purrr::map(data, janitor::adorn_totals, "row")) %>% 
+        tidyr::unnest(data) %>% 
+        group_by(categoria) %>% 
+        #mutate(ano_referencia = as.character(ano_referencia)) %>% 
+        e_charts(ano_referencia) %>%
+        e_line(bolsas_concedidas) %>% 
+        e_y_axis(formatter = e_axis_formatter(locale = "pt-BR")) %>% 
+        e_x_axis(min = min(input$date_range),
+                 max = max(input$date_range),
+                 formatter = e_axis_formatter(locale = "pt-BR")) %>% 
+        e_axis_labels(x = "Ano", y = "Bolsas concedidas") %>% 
+        e_title("Linha do tempo", left = 'center') %>% 
+        e_tooltip(trigger = "axis", 
+                  formatter = e_tooltip_pointer_formatter(digits = 0)) %>% 
+        e_grid(right = '15%') %>% 
+        e_legend(orient = 'vertical', right = '5', top = '15%',
+                 selector = list(
+                   list(type = 'inverse', title = 'Inverter'),
+                   list(type = 'all', title = 'Restaurar')
+                 )) %>% 
+        e_toolbox_feature(c("dataZoom", "dataView", "saveAsImage")) %>% 
+        e_animation(duration = 1000) %>% 
+        e_theme("bee-insipired")
+      
+    } else {
+      
+      base_filtrada() %>% 
+        group_by(ano_referencia, categoria) %>% 
+        summarise(valor_pago = sum(valor_pago), .groups = "drop") %>% 
+        group_by(ano_referencia) %>% 
+        tidyr::nest() %>% 
+        ungroup() %>% 
+        mutate(data = purrr::map(data, janitor::adorn_totals, "row")) %>% 
+        tidyr::unnest(data) %>% 
+        group_by(categoria) %>% 
+        mutate(ano_referencia = as.character(ano_referencia)) %>% 
+        e_charts(ano_referencia) %>%
+        e_line(valor_pago) %>% 
+        e_y_axis(formatter = e_axis_formatter("currency", currency = "BRL", locale = "pt-BR")) %>% 
+        e_x_axis(min = min(input$date_range),
+                 max = max(input$date_range),
+                 formatter = e_axis_formatter(locale = "pt-BR")) %>% 
+        e_axis_labels(x = "Ano", y = "Valor pago") %>% 
+        e_title("Linha do tempo", left = 'center') %>% 
+        e_tooltip(trigger = "axis", 
+                  formatter = e_tooltip_pointer_formatter(digits = 0)) %>% 
+        e_grid(right = '15%') %>% 
+        e_legend(orient = 'vertical', right = '5', top = '15%',
+                 selector = list(
+                   list(type = 'inverse', title = 'Inverter'),
+                   list(type = 'all', title = 'Restaurar')
+                 )) %>% 
+        e_toolbox_feature(c("dataZoom", "dataView", "saveAsImage")) %>% 
+        e_animation(duration = 1000) %>% 
+        e_theme("bee-insipired")
+    }
     
+
   })
   
   ## output ranking instituicoes ----
@@ -569,6 +613,8 @@ server <- function(input, output, session) {
             emphasis = list(
               focus = 'series', blurScope = 'coordinateSystem'
             )) %>% 
+      e_y_axis(formatter = e_axis_formatter(locale = "pt-BR")) %>% 
+      e_axis_labels(y = "Número de bolsas") %>% 
       e_flip_coords() %>% 
       e_tooltip()
     
@@ -592,6 +638,8 @@ server <- function(input, output, session) {
             emphasis = list(
               focus = 'series', blurScope = 'coordinateSystem'
             )) %>% 
+      e_y_axis(formatter = e_axis_formatter(locale = "pt-BR")) %>% 
+      e_axis_labels(y = "Número de bolsas") %>% 
       e_flip_coords() %>% 
       e_tooltip()
     
@@ -611,7 +659,8 @@ server <- function(input, output, session) {
                              cidade_destino = colDef(name = "Cidade Destino"),
                              instituicao_destino = colDef(name = "Instituição Destino"),
                              bolsas_concedidas = colDef(name = "Bolsas"),
-                             valor_pago = colDef(name = "Valor pago", format = colFormat(currency = "BRL"))
+                             valor_pago = colDef(name = "Valor pago", format = colFormat(currency = "BRL",
+                                                                                         separators = TRUE))
                            ))
   })
 }

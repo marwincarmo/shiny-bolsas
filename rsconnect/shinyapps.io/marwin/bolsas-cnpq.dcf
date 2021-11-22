@@ -1,0 +1,14 @@
+name: bolsas-cnpq
+title: bolsas-cnpq
+username:
+account: marwin
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 5183708
+bundleId: 5281718
+url: https://marwin.shinyapps.io/bolsas-cnpq/
+when: 1637610146.03233
+lastSyncTime: 1637610146.03233
+asMultiple: FALSE
+asStatic: FALSE
+ignoredFiles: app_teste.R|appbs4d.R|functions/unir_bases.R|R/fun.R|testes.R

@@ -36,7 +36,7 @@ leitura_limpeza <- function(u_base, ano) {
 
 url <- "http://ftp.cnpq.br/pub/CKAN/investimentos_cnpq_"
 
-purrr::map2(url,c(2010:2017), ~leitura_limpeza(.x, .y))
+purrr::map2(url,c(2002:2018), ~leitura_limpeza(.x, .y))
 
 
 ### Download das bases de 2019 e 2020 ----
@@ -107,3 +107,32 @@ cnpq_completo <- purrr::map_dfr(bases, ~readr::read_rds(paste0("data/", .x)))
 
 saveRDS(cnpq_completo, file = "data/cnpq_completo.rds",
         compress = TRUE)
+
+# 3. Dados de localização -------------------------------------------------
+
+library(tidygeocoder)
+
+cnpq_completo_enderecos <- cnpq_completo %>% 
+  mutate(addr = case_when(
+    !is.na(sigla_uf_destino) ~ paste0(cidade_destino, ", ", sigla_uf_destino),
+    TRUE ~ cidade_destino
+  )) %>% 
+  geocode(address = addr,  method = 'osm', lat = latitude , long = longitude) %>% 
+  # consertando uma observação de ano que deveria ser 2006 e está como 206
+  mutate(ano_referencia = case_when(
+    ano_referencia == 206 ~ 2006,
+    TRUE ~ ano_referencia
+  ))
+
+# locations <- bind_rows(locations, novos_enderecos)
+# base_antiga <- readr::read_rds("data/cnpq_completo_antigo.rds")
+# base_nova <- base %>% 
+#   mutate(addr = case_when(
+#     !is.na(sigla_uf_destino) ~ paste0(cidade_destino, ", ", sigla_uf_destino),
+#     TRUE ~ cidade_destino
+#   )) %>% 
+#   left_join(locations, by = c("cidade_destino", "sigla_uf_destino", "addr"))
+
+saveRDS(base, file = "data/cnpq_completo.rds",
+        compress = TRUE)
+

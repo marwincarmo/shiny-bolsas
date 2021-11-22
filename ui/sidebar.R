@@ -1,5 +1,7 @@
 sidebar <- dashboardSidebar(
   collapsed = FALSE,
+  skin = "dark",
+  status = "info",
   # https://fontawesome.com/icons?d=gallery&m=free
   sidebarMenu(
     id = "tabs",
@@ -12,8 +14,8 @@ sidebar <- dashboardSidebar(
     menuItem("Info",
              tabName = "info_tab",
              icon = icon("info-circle")),
-    menuItem("Codigo no github",
-             tabName = "code",
+    menuItem("Codigo fonte",
+             href = "https://github.com/marwincarmo/shiny-bolsas",
              icon = icon("github"))
     
   )
