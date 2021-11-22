@@ -3,13 +3,18 @@ sidebar <- dashboardSidebar(
   # https://fontawesome.com/icons?d=gallery&m=free
   sidebarMenu(
     id = "tabs",
-    # menuItem("Main", tabName = "main_tab",
-    #          icon = icon("home")),
-    menuItem("Mapa", tabName = "map_tab",
-             icon = icon("map-marked-alt"),
+    menuItem("Dados gerais", 
+             tabName = "geral_tab",
+             icon = icon("chart-bar"),
              startExpanded = TRUE),
-    menuItem("Por area", 
-             tabName = "area_tab",
-             icon = icon("chart-bar"))
+    menuItem("Mapa das bolsas", tabName = "map_tab",
+             icon = icon("globe-americas")),
+    menuItem("Info",
+             tabName = "info_tab",
+             icon = icon("info-circle")),
+    menuItem("Codigo no github",
+             tabName = "code",
+             icon = icon("github"))
+    
   )
 )

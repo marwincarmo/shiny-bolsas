@@ -140,6 +140,13 @@ ui <- dashboardPage(
 
 server <- function(input, output, session) {
   
+  base_filtrada <- reactive({
+    base %>% 
+      
+    
+    
+  })
+  
   react_categoria <- reactive(no_filter(input$categoria_bolsa, base$categoria))
   react_grande_area <- reactive(no_filter(input$grande_area, base$grande_area))
   react_area_especifica <- reactive(no_filter(input$area_especifica, base$area))

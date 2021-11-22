@@ -1,4 +1,4 @@
-## pacotes ----
+# pacotes ----
 suppressPackageStartupMessages({
   library(shiny)
   library(shinyWidgets)
@@ -7,15 +7,16 @@ suppressPackageStartupMessages({
   #library(shinydashboard)
   library(leaflet)
   library(dplyr)
-  library(ggplot2)
+  library(reactable)
   library(echarts4r)
 })
 
-## database ----
+# database ----
 
 base <- readr::read_rds("data/cnpq_completo.rds")
+base_tabela <- readr::read_rds("data/cnpq_tabela.rds")
 
-## Tabs ----
+# Tabs ----
 
 #source("ui/map_tab.R")
 source("ui/sidebar.R")
@@ -26,18 +27,20 @@ ui <- dashboardPage(
   skin = 'blue',
   dashboardHeader(title = dashboardBrand(
     title = 'Bolsas CNPq',
-    image = '<i class="fas fa-atom"></i>'
+    image = '<i class="fas fa-atom"></i>',
+    href = 'https://github.com/marwincarmo/shiny-bolsas'
     )
     ),
   sidebar = sidebar,
   dashboardBody(
     tabItems(
       tabItem(
+        # Aba mapa
         tabName = "map_tab",
         fluidPage(
           tabPanel("",
                    div(class="outer",
-                       
+                       # fonte: https://github.com/rstudio/shiny-examples/tree/main/063-superzip-example
                        tags$head(
                          # Include our custom CSS
                          includeCSS("styles.css"),
@@ -49,18 +52,13 @@ ui <- dashboardPage(
                        
                        # Shiny versions prior to 0.11 should use class = "modal" instead.
                        absolutePanel(id = "controls", class = "panel panel-default", fixed = TRUE,
-                                     draggable = TRUE, top = 60, left = "auto", right = 20, bottom = "auto",
-                                     width = 330, height = "auto",
+                                     draggable = TRUE, top = 60, left = "auto", right =  "auto", bottom = "auto",
+                                     width = 330, height = 330,
                                      
                                      h2("Mapa das bolsas"),
                                      
                                      p("Este mapa mostra a distribuição das cidades de destino
-                               de bolsas cedidas pelo cnpq. Utilizando os campos acima,
-                               você pode filtrar os resultados selecionando um ou mais
-                               critérios específicos. Caso nenhum filtro esteja selecionado, 
-                               serão apresentados os resultados para todas as categorias, 
-                               modalidades e áreas."),
-                               p("Ao aproximar a visão do mapa, um marcador indicará cada
+                               de bolsas cedidas pelo CNPq. Ao aproximar a visão do mapa, um marcador indicará cada
                                cidade para qual houve a destinação de alguma bolsa.
                                Ao clicar no marcador, você poderá ver o nome da cidade
                                e a quantidade de bolsas cedidas."),
@@ -73,7 +71,8 @@ ui <- dashboardPage(
         )
       ),
       tabItem(
-        tabName = "area_tab",
+        # Aba geral ----
+        tabName = "geral_tab",
         
         fluidRow(
           ## value box com resumo da frequencia de bolsas ----
@@ -84,7 +83,7 @@ ui <- dashboardPage(
           shinydashboard::valueBoxOutput("num_posdoc", width = 2),
           shinydashboard::valueBoxOutput("num_outro", width = 2)
         ),
-        ## linha do tempo
+        ## linha do tempo ----
         fluidRow(
           box(
             title = "Linha do Tempo",
@@ -114,7 +113,8 @@ ui <- dashboardPage(
                    width = NULL,
                    title = "Ranking por Cidade",
                    solidHeader = TRUE,
-                   collapsible = TRUE
+                   collapsible = TRUE,
+                   echarts4rOutput("ranking_cidade")
                    )
                  ),
           column(width = 6,
@@ -122,7 +122,8 @@ ui <- dashboardPage(
                    width = NULL,
                    title = "Ranking por Instituição",
                    solidHeader = TRUE,
-                   collapsible = TRUE
+                   collapsible = TRUE,
+                   echarts4rOutput("ranking_instituicao")
                  ))
         ),
         ## tabela de dados gerais ----
@@ -130,12 +131,14 @@ ui <- dashboardPage(
           box(title = "Tabela de dados",
               solidHeader = TRUE,
               collapsible = TRUE,
-              width = 12)
+              width = 12,
+              reactable::reactableOutput("tabela_geral"))
         )
         
       )
     )
   ),
+  # control bar ----
   controlbar = dashboardControlbar(
     skin = "light",
     width = 300,
@@ -145,8 +148,9 @@ ui <- dashboardPage(
     controlbarMenu(
       id = "controlbarmenu",
       controlbarItem(
+        ## periodo/ area
         title = "Período/ Área",
-        ## período ----
+        ### período ----
         sliderInput(
           inputId = "date_range",
           label = "Escolha um período:",
@@ -156,7 +160,7 @@ ui <- dashboardPage(
           max = max(base$ano_referencia),
           value = c(2016,2020)
         ),
-        
+        ### grande area ----
         pickerInput(
           inputId = "grande_area",
           label = "Grande Area", 
@@ -165,23 +169,24 @@ ui <- dashboardPage(
             title = "Escolha uma ou mais áreas"), 
           multiple = TRUE
         ),
-
+        ### area especifica ----
         selectInput(inputId = "area_especifica", 
                     label = "Area específica",
                     choices = c("Carregando..." = ""),
                     selectize = TRUE,
                     multiple = TRUE),
-        
+        ### categoria da bolsa ----
         selectInput(inputId = "categoria_bolsa", 
                     label = "Categoria da bolsa",
                     choices = sort(unique(base$categoria)),
                     multiple = TRUE),
-        
+        ### modalidade da bolsa ----
         selectInput(inputId = "modalidade_bolsa", 
                     label = "Modalidade da bolsa",
                     choices = c("Carregando..." = ""),
                     selectize = TRUE,
                     multiple = TRUE),
+        ### botao limpar selecao area ----
         actionBttn(
           inputId = "reset_area",
           label = "Limpar seleção",
@@ -191,9 +196,10 @@ ui <- dashboardPage(
           size = "sm"
         )
       ),
+      ## local
       controlbarItem(
         title = "Local",
-        # selecionar país ----
+        ### selecionar país ----
         pickerInput(
           inputId = "pais_destino",
           label = "País de destino", 
@@ -202,23 +208,23 @@ ui <- dashboardPage(
             title = "Escolha um ou mais países"), 
           multiple = TRUE
         ),
-        ## selecionar UF ----
+        ### selecionar UF ----
         selectizeInput(inputId = "uf_destino", 
-                    label = "Estado (apenas BR)",
-                    choices = c("Carregando..." = ""),
+                    label = "Estado",
+                    choices = c("UFs brasileiras" = ""),
                     multiple = TRUE),
-        ## selecionar cidade ----
+        ### selecionar cidade ----
         selectizeInput(inputId = "cidade_destino", 
-                    label = "Cidade (global)",
-                    choices = c("Carregando..." = ""),
+                    label = "Cidade",
+                    choices = c("Todas as cidades" = ""),
                     multiple = TRUE),
-        ## selecionar instituicao ----
+        ### selecionar instituicao ----
         selectizeInput(inputId = "inst_destino", 
                     label = "Instituição destino",
-                    choices = c("Carregando..." = ""),
+                    choices = c("Todas as instituições." = ""),
                     multiple = TRUE),
         
-        ## limpar selecao localizacao
+        ### limpar selecao localizacao ----
         actionBttn(
           inputId = "reset_local",
           label = "Limpar seleção",
@@ -231,22 +237,51 @@ ui <- dashboardPage(
       
     )
     ),
+  ## footer ----
   footer = dashboardFooter(
     left = a(
-      href = "https://twitter.com/marwincarmo",
-      target = "_blank", "@marwincarmo"
+      href = "https://marwincarmo.github.io/",
+      target = "_blank", "Marwin M I B Carmo"
     ),
-    right = "2021"
+    right = a(
+      href = "http://dadosabertos.cnpq.br/pt_BR/organization/cnpq",
+      target = "_blank", "Fonte: Portal de dados abertos CNPq"
+    )
   )
 )
 
 server <- function(input, output, session) {
   
-  react_categoria <- reactive(no_filter(input$categoria_bolsa, base$categoria))
-  react_grande_area <- reactive(no_filter(input$grande_area, base$grande_area))
-  react_area_especifica <- reactive(no_filter(input$area_especifica, base$area))
-  react_modalidade <- reactive(no_filter(input$modalidade_bolsa, base$modalidade))
+  ## funcao no_filter ----
+  ## se não tiver seleção no input, retorna todos os valores
+  no_filter <- function(input, val) {
+    if (is.null(input)) {
+      unique(val)
+    } else {
+      input
+    }
+  }
   
+  base_filtrada <- reactive({
+    
+    base %>% 
+      filter(ano_referencia %in% seq(min(input$date_range), max(input$date_range)),
+             categoria %in% no_filter(input$categoria_bolsa, base$categoria),
+             grande_area %in% no_filter(input$grande_area, base$grande_area),
+             modalidade %in% no_filter(input$modalidade_bolsa, base$modalidade),
+             area %in% no_filter(input$area_especifica, base$area),
+             pais_destino %in% no_filter(input$pais_destino, base$pais_destino),
+             sigla_uf_destino %in% no_filter(input$uf_destino, base$sigla_uf_destino),
+             addr %in% no_filter(input$cidade_destino, base$addr),
+             instituicao_destino %in% no_filter(input$inst_destino, base$instituicao_destino),
+             
+             
+      ) %>% 
+      group_by(addr, latitude, longitude) %>% 
+      summarise(bolsas_concedidas = sum(bolsas_concedidas))
+    
+  })
+
   observe({
     
     escolha_modalidade <- if(is.null(input$categoria_bolsa)) {
@@ -417,24 +452,16 @@ server <- function(input, output, session) {
     updateSelectizeInput(inputId = "inst_destino", selected = character(0), server = TRUE)
   })
   
+  ## output mapa ----
   output$map <- renderLeaflet({
-    base_mapa <- base %>%
-      filter(ano_referencia %in% seq(min(input$date_range), max(input$date_range)),
-             categoria %in% react_categoria(),
-             grande_area %in% react_grande_area(),
-             modalidade %in% react_modalidade(),
-             area %in% react_area_especifica()
-             ) %>% 
-      group_by(addr, latitude, longitude) %>% 
-      summarise(bolsas_concedidas = sum(bolsas_concedidas))
-    
-    base_mapa %>% 
+
+    base_filtrada() %>% 
       leaflet() %>% 
       addTiles() %>% 
       addMarkers(
         popup = paste0(
-         '<b>Cidade:</b> ', base_mapa$addr, '<br>',
-         '<b>Bolsas:</b> ', base_mapa$bolsas_concedidas, '<br>'
+        '<b>Cidade:</b> ', pull(base_filtrada(), addr), '<br>',
+        '<b>Bolsas:</b> ', pull(base_filtrada(), bolsas_concedidas), '<br>'
         ),
         clusterOptions = markerClusterOptions()
       )
@@ -501,14 +528,91 @@ server <- function(input, output, session) {
       mutate(ano_referencia = as.character(ano_referencia)) %>% 
       e_charts(ano_referencia) %>%
       e_line(bolsas_concedidas) %>% 
-      #e_x_axis(min = 2010, formatter = e_axis_formatter(digits = 0, locale = "pt-BR", sep = "")) %>% 
+      #e_x_axis(min = 2010, formatter = e_axis_formatter(digits = 0, locale = "pt-BR")) %>% 
+      e_y_axis(formatter = e_axis_formatter(locale = "pt-BR")) %>% 
       e_axis_labels(x = "Ano", y = "Bolsas concedidas") %>% 
-      #e_title("Linha do tempo") %>% 
-      e_tooltip(trigger = "axis", formatter = e_tooltip_pointer_formatter(digits = 0)) %>% 
+      e_title("Linha do tempo", left = 'center') %>% 
+      e_tooltip(trigger = "axis", 
+                formatter = e_tooltip_pointer_formatter(digits = 0)) %>% 
+      e_grid(right = '15%') %>% 
+      e_legend(orient = 'vertical', right = '5', top = '15%',
+               selector = list(
+                 list(type = 'inverse', title = 'Inverter'),
+                 list(type = 'all', title = 'Restaurar')
+               )) %>% 
+      e_toolbox_feature(c("dataZoom", "dataView", "saveAsImage")) %>% 
+      e_animation(duration = 1000) %>% 
       e_theme("bee-insipired")
     
   })
   
+  ## output ranking instituicoes ----
+  output$ranking_instituicao <- renderEcharts4r({
+    base %>% 
+      sample_n(1000) %>% 
+      group_by(instituicao_destino, categoria) %>% 
+      summarise(bolsas_concedidas = sum(bolsas_concedidas), .groups = "drop") %>% 
+      sample_n(10) %>% 
+      group_by(categoria) %>% 
+      # tidyr::nest() %>% 
+      # ungroup() %>% 
+      # mutate(data = purrr::map(data, janitor::adorn_totals, "row")) %>% 
+      # tidyr::unnest(data) %>% 
+      # group_by(categoria) %>% 
+      # mutate(ano_referencia = as.character(ano_referencia)) %>% 
+      e_charts(instituicao_destino) %>%
+      e_bar(bolsas_concedidas,  stack = 'total',
+            emphasis = list(
+              focus = 'series', blurScope = 'coordinateSystem'
+            )) %>% 
+      e_flip_coords() %>% 
+      e_tooltip(trigger = "shadow", 
+                formatter = e_tooltip_pointer_formatter(digits = 0))
+    
+  })
+  
+  ## output ranking cidades ----
+  output$ranking_cidade <- renderEcharts4r({
+    
+    base %>% 
+      sample_n(1000) %>% 
+      group_by(cidade_destino, categoria) %>% 
+      summarise(bolsas_concedidas = sum(bolsas_concedidas), .groups = "drop") %>% 
+      with_groups(cidade_destino, mutate, total_bolsas = sum(bolsas_concedidas)) %>% 
+      arrange(desc(total_bolsas)) %>% 
+      with_groups(cidade_destino, tidyr::nest) %>% 
+      slice_head(n =10) %>% 
+      arrange(-row_number()) %>% 
+      tidyr::unnest() %>% 
+      group_by(categoria) %>% 
+      e_charts(cidade_destino) %>%
+      e_bar(bolsas_concedidas,  stack = 'total',
+            emphasis = list(
+              focus = 'series', blurScope = 'coordinateSystem'
+            )) %>% 
+      e_flip_coords() %>% 
+      e_tooltip()
+    
+  })
+  
+  ## output tabela geral -----
+  output$tabela_geral <- reactable::renderReactable({
+    
+    base_tabela %>% 
+      sample_n(1000) %>% 
+      reactable::reactable(filterable = TRUE, 
+                           resizable = TRUE,
+                           minRows = 10,
+                           columns = list(
+                             ano_referencia = colDef(name = "Ano"),
+                             modalidade = colDef(name = "Modalidade"),
+                             area = colDef(name = "Área"),
+                             cidade_destino = colDef(name = "Cidade Destino"),
+                             instituicao_destino = colDef(name = "Instituição Destino"),
+                             bolsas_concedidas = colDef(name = "Bolsas"),
+                             valor_pago = colDef(name = "Valor pago", format = colFormat(currency = "BRL"))
+                           ))
+  })
 }
 
 shinyApp(ui, server)
