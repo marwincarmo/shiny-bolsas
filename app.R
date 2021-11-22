@@ -273,12 +273,8 @@ server <- function(input, output, session) {
              pais_destino %in% no_filter(input$pais_destino, base$pais_destino),
              sigla_uf_destino %in% no_filter(input$uf_destino, base$sigla_uf_destino),
              addr %in% no_filter(input$cidade_destino, base$addr),
-             instituicao_destino %in% no_filter(input$inst_destino, base$instituicao_destino),
-             
-             
-      ) %>% 
-      group_by(addr, latitude, longitude) %>% 
-      summarise(bolsas_concedidas = sum(bolsas_concedidas))
+             instituicao_destino %in% no_filter(input$inst_destino, base$instituicao_destino)
+      ) 
     
   })
 
@@ -455,13 +451,17 @@ server <- function(input, output, session) {
   ## output mapa ----
   output$map <- renderLeaflet({
 
-    base_filtrada() %>% 
+    base_mapa <- base_filtrada() %>% 
+      group_by(addr, latitude, longitude) %>% 
+      summarise(bolsas_concedidas = sum(bolsas_concedidas))
+    
+    base_mapa %>% 
       leaflet() %>% 
       addTiles() %>% 
       addMarkers(
         popup = paste0(
-        '<b>Cidade:</b> ', pull(base_filtrada(), addr), '<br>',
-        '<b>Bolsas:</b> ', pull(base_filtrada(), bolsas_concedidas), '<br>'
+        '<b>Cidade:</b> ', base_mapa$addr, '<br>',
+        '<b>Bolsas:</b> ', base_mapa$bolsas_concedidas, '<br>'
         ),
         clusterOptions = markerClusterOptions()
       )
@@ -469,44 +469,50 @@ server <- function(input, output, session) {
   
   ## value box total ----
   output$num_total <- shinydashboard::renderValueBox({
-    shinydashboard::valueBox(
-      0, "Bolsas no total",
+      shinydashboard::valueBox(
+      sum(pull(base_filtrada(), bolsas_concedidas)), "Bolsas no total",
       color = "purple"
     )
   })
   
+  
   ## value box ic ----
   output$num_ic <- shinydashboard::renderValueBox({
     shinydashboard::valueBox(
-      0, "Bolsas de IC",
+      sum(pull(dplyr::filter(base_filtrada(), categoria == "Iniciação Científica"), bolsas_concedidas)), 
+      "Bolsas de Iniciação Científica",
       color = "purple"
     )
   })
   ## value box mestrado ----
   output$num_mestrado <- shinydashboard::renderValueBox({
     shinydashboard::valueBox(
-      0, "Bolsas de Mestrado",
+      sum(pull(dplyr::filter(base_filtrada(), categoria == "Mestrado"), bolsas_concedidas)),
+      "Bolsas de Mestrado",
       color = "purple"
     )
   })
   ## value box doutorado ----
   output$num_doutorado <- shinydashboard::renderValueBox({
     shinydashboard::valueBox(
-      0, "Bolsas de Doutorado",
+      sum(pull(dplyr::filter(base_filtrada(), categoria == "Doutorado"), bolsas_concedidas)),
+      "Bolsas de Doutorado",
       color = "purple"
     )
   })
   ## value box posdoc ----
   output$num_posdoc <- shinydashboard::renderValueBox({
     shinydashboard::valueBox(
-      0, "Bolsas de Pós-doc",
+      sum(pull(dplyr::filter(base_filtrada(), categoria == "Pós-doutorado"), bolsas_concedidas)),
+      "Bolsas de Pós-doc",
       color = "purple"
     )
   })
   ## value box outras ----
   output$num_outro <- shinydashboard::renderValueBox({
     shinydashboard::valueBox(
-      0, "Bolsas de outra categoria",
+      sum(pull(dplyr::filter(base_filtrada(), categoria == "Outros"), bolsas_concedidas)),
+      "Bolsas de outra categoria",
       color = "purple"
     )
   })
@@ -515,8 +521,7 @@ server <- function(input, output, session) {
   
   output$timeline <- renderEcharts4r({
     
-    base %>% 
-      sample_n(1000) %>% 
+    base_filtrada() %>% 
       group_by(ano_referencia, categoria) %>% 
       summarise(bolsas_concedidas = sum(bolsas_concedidas), .groups = "drop") %>% 
       group_by(ano_referencia) %>% 
@@ -548,34 +553,31 @@ server <- function(input, output, session) {
   
   ## output ranking instituicoes ----
   output$ranking_instituicao <- renderEcharts4r({
-    base %>% 
-      sample_n(1000) %>% 
+    
+    base_filtrada() %>% 
       group_by(instituicao_destino, categoria) %>% 
       summarise(bolsas_concedidas = sum(bolsas_concedidas), .groups = "drop") %>% 
-      sample_n(10) %>% 
+      with_groups(instituicao_destino, mutate, total_bolsas = sum(bolsas_concedidas)) %>% 
+      arrange(desc(total_bolsas)) %>% 
+      with_groups(instituicao_destino, tidyr::nest) %>% 
+      slice_head(n =10) %>% 
+      arrange(-row_number()) %>% 
+      tidyr::unnest() %>% 
       group_by(categoria) %>% 
-      # tidyr::nest() %>% 
-      # ungroup() %>% 
-      # mutate(data = purrr::map(data, janitor::adorn_totals, "row")) %>% 
-      # tidyr::unnest(data) %>% 
-      # group_by(categoria) %>% 
-      # mutate(ano_referencia = as.character(ano_referencia)) %>% 
       e_charts(instituicao_destino) %>%
       e_bar(bolsas_concedidas,  stack = 'total',
             emphasis = list(
               focus = 'series', blurScope = 'coordinateSystem'
             )) %>% 
       e_flip_coords() %>% 
-      e_tooltip(trigger = "shadow", 
-                formatter = e_tooltip_pointer_formatter(digits = 0))
+      e_tooltip()
     
   })
   
   ## output ranking cidades ----
   output$ranking_cidade <- renderEcharts4r({
     
-    base %>% 
-      sample_n(1000) %>% 
+    base_filtrada() %>% 
       group_by(cidade_destino, categoria) %>% 
       summarise(bolsas_concedidas = sum(bolsas_concedidas), .groups = "drop") %>% 
       with_groups(cidade_destino, mutate, total_bolsas = sum(bolsas_concedidas)) %>% 
@@ -599,7 +601,6 @@ server <- function(input, output, session) {
   output$tabela_geral <- reactable::renderReactable({
     
     base_tabela %>% 
-      sample_n(1000) %>% 
       reactable::reactable(filterable = TRUE, 
                            resizable = TRUE,
                            minRows = 10,
