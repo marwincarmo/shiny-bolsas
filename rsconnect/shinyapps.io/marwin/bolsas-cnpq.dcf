@@ -5,10 +5,10 @@ account: marwin
 server: shinyapps.io
 hostUrl: https://api.shinyapps.io/v1
 appId: 5183708
-bundleId: 5282622
+bundleId: 5284352
 url: https://marwin.shinyapps.io/bolsas-cnpq/
-when: 1637627547.687
-lastSyncTime: 1637627547.687
+when: 1637669664.31501
+lastSyncTime: 1637669664.31501
 asMultiple: FALSE
 asStatic: FALSE
-ignoredFiles: app_teste.R|data/cnpq_completo.rds|data/cnpq_tabela.rds|data/locations.rds|tratamento_dados/unir_bases.R
+ignoredFiles: app_teste.R|data/cnpq_completo_antigo.rds|data/cnpq_tabela.rds|data/cnpq_tabela_antigo.rds|data/locations.rds|tratamento_dados/unir_bases.R

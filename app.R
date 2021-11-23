@@ -2,7 +2,7 @@
 suppressPackageStartupMessages({
   library(shiny)
   library(shinyWidgets)
-  library(shinyjs)
+  #library(shinyjs)
   library(bs4Dash)
   #library(shinydashboard)
   library(leaflet)
@@ -14,11 +14,10 @@ suppressPackageStartupMessages({
 # database ----
 
 base <- readr::read_rds("data/cnpq_completo.rds")
-base_tabela <- readr::read_rds("data/cnpq_tabela.rds")
+#base_tabela <- readr::read_rds("data/cnpq_tabela.rds")
 
 # Tabs ----
 
-#source("ui/map_tab.R")
 source("ui/sidebar.R")
 
 
@@ -103,7 +102,7 @@ ui <- dashboardPage(
         ),
         ## gráficos de ranking ----
         fluidRow(
-          column(width = 6,
+          column(width = 12,
                  box(
                    width = NULL,
                    title = "Ranking por Cidade",
@@ -113,8 +112,9 @@ ui <- dashboardPage(
                    status = "info",
                    shinycssloaders::withSpinner(echarts4rOutput("ranking_cidade"))
                    )
-                 ),
-          column(width = 6,
+                 )),
+        fluidRow(
+          column(width = 12,
                  box(
                    width = NULL,
                    title = "Ranking por Instituição",
@@ -126,15 +126,15 @@ ui <- dashboardPage(
                  ))
         ),
         ## tabela de dados gerais ----
-        fluidRow(
-          box(title = "Tabela de dados",
-              solidHeader = TRUE,
-              collapsible = TRUE,
-              maximizable = TRUE,
-              status = "info",
-              width = 12,
-              shinycssloaders::withSpinner(reactable::reactableOutput("tabela_geral")))
-        )
+        # fluidRow(
+        #   box(title = "Tabela de dados",
+        #       solidHeader = TRUE,
+        #       collapsible = TRUE,
+        #       maximizable = TRUE,
+        #       status = "info",
+        #       width = 12,
+        #       reactable::reactableOutput("tabela_geral"))
+        # )
         
       )
     )
@@ -560,36 +560,36 @@ server <- function(input, output, session) {
         e_theme("bee-insipired")
       
     } else {
-      
-      base_filtrada() %>% 
-        group_by(ano_referencia, categoria) %>% 
-        summarise(valor_pago = sum(valor_pago), .groups = "drop") %>% 
-        group_by(ano_referencia) %>% 
-        tidyr::nest() %>% 
-        ungroup() %>% 
-        mutate(data = purrr::map(data, janitor::adorn_totals, "row")) %>% 
-        tidyr::unnest(data) %>% 
-        group_by(categoria) %>% 
-        mutate(ano_referencia = as.character(ano_referencia)) %>% 
-        e_charts(ano_referencia) %>%
-        e_line(valor_pago) %>% 
-        e_y_axis(formatter = e_axis_formatter("currency", currency = "BRL", locale = "pt-BR")) %>% 
-        e_x_axis(min = min(input$date_range),
-                 max = max(input$date_range),
-                 formatter = e_axis_formatter(locale = "pt-BR")) %>% 
-        e_axis_labels(x = "Ano", y = "Valor pago") %>% 
-        e_title("Linha do tempo", left = 'center') %>% 
-        e_tooltip(trigger = "axis", 
-                  formatter = e_tooltip_pointer_formatter(digits = 0)) %>% 
-        e_grid(right = '15%') %>% 
-        e_legend(orient = 'vertical', right = '5', top = '15%',
-                 selector = list(
-                   list(type = 'inverse', title = 'Inverter'),
-                   list(type = 'all', title = 'Restaurar')
-                 )) %>% 
-        e_toolbox_feature(c("dataZoom", "dataView", "saveAsImage")) %>% 
-        e_animation(duration = 1000) %>% 
-        e_theme("bee-insipired")
+     
+     base_filtrada() %>% 
+       group_by(ano_referencia, categoria) %>% 
+       summarise(valor_pago = sum(valor_pago), .groups = "drop") %>% 
+       group_by(ano_referencia) %>% 
+       tidyr::nest() %>% 
+       ungroup() %>% 
+       mutate(data = purrr::map(data, janitor::adorn_totals, "row")) %>% 
+       tidyr::unnest(data) %>% 
+       group_by(categoria) %>% 
+       #mutate(ano_referencia = as.character(ano_referencia)) %>% 
+       e_charts(ano_referencia) %>%
+       e_line(valor_pago) %>% 
+       e_y_axis(formatter = e_axis_formatter("currency", currency = "BRL", locale = "pt-BR")) %>% 
+       e_x_axis(min = min(input$date_range),
+                max = max(input$date_range),
+                formatter = e_axis_formatter(locale = "pt-BR")) %>% 
+       e_axis_labels(x = "Ano", y = "Valor pago") %>% 
+       e_title("Linha do tempo", left = 'center') %>% 
+       e_tooltip(trigger = "axis", 
+                 formatter = e_tooltip_pointer_formatter(digits = 0)) %>% 
+       e_grid(right = '15%') %>% 
+       e_legend(orient = 'vertical', right = '5', top = '15%',
+                selector = list(
+                  list(type = 'inverse', title = 'Inverter'),
+                  list(type = 'all', title = 'Restaurar')
+                )) %>% 
+       e_toolbox_feature(c("dataZoom", "dataView", "saveAsImage")) %>% 
+       e_animation(duration = 1000) %>% 
+       e_theme("bee-insipired")
     }
     
 
@@ -646,23 +646,23 @@ server <- function(input, output, session) {
   })
   
   ## output tabela geral -----
-  output$tabela_geral <- reactable::renderReactable({
-    
-    base_tabela %>% 
-      reactable::reactable(filterable = TRUE, 
-                           resizable = TRUE,
-                           minRows = 10,
-                           columns = list(
-                             ano_referencia = colDef(name = "Ano"),
-                             modalidade = colDef(name = "Modalidade"),
-                             area = colDef(name = "Área"),
-                             cidade_destino = colDef(name = "Cidade Destino"),
-                             instituicao_destino = colDef(name = "Instituição Destino"),
-                             bolsas_concedidas = colDef(name = "Bolsas"),
-                             valor_pago = colDef(name = "Valor pago", format = colFormat(currency = "BRL",
-                                                                                         separators = TRUE))
-                           ))
-  })
+  # output$tabela_geral <- reactable::renderReactable({
+  #  
+  #  base_tabela %>% 
+  #    reactable::reactable(filterable = TRUE, 
+  #                         resizable = TRUE,
+  #                         minRows = 10,
+  #                         columns = list(
+  #                           ano_referencia = colDef(name = "Ano"),
+  #                           modalidade = colDef(name = "Modalidade"),
+  #                           area = colDef(name = "Área"),
+  #                           cidade_destino = colDef(name = "Cidade Destino"),
+  #                           instituicao_destino = colDef(name = "Instituição Destino"),
+  #                           bolsas_concedidas = colDef(name = "Bolsas"),
+  #                           valor_pago = colDef(name = "Valor pago", format = colFormat(currency = "BRL",
+  #                                                                                       separators = TRUE))
+  #                         ))
+  # })
 }
 
 shinyApp(ui, server)
