@@ -136,3 +136,14 @@ cnpq_completo_enderecos <- cnpq_completo %>%
 saveRDS(base, file = "data/cnpq_completo.rds",
         compress = TRUE)
 
+
+# 4. Base de dados para ser mostrada no formato de tabela -----------------
+
+base_tabela <- base %>% 
+  with_groups(c(ano_referencia, modalidade, area, cidade_destino,
+                instituicao_destino, bolsas_concedidas, valor_pago), 
+              summarise, bolsas_concedidas = sum(bolsas_concedidas), 
+              valor_pago = sum(valor_pago))
+
+saveRDS(base_tabela, file = "data/cnpq_tabela.rds",
+        compress = TRUE)
